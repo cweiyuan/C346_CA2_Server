@@ -91,3 +91,20 @@ app.delete('/deletehabits/:id', async (req, res) => {
         res.status(500).json({message: 'Server error - could not delete habit'});
     }
 });
+
+//completion route
+app.post('/completions', async (req, res) => {
+    const {habit_id, points_earned, notes} = req.body;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        await connection.execute(
+            'INSERT INTO habit_completions (habit_id, points_earned, notes) VALUES (?, ?, ?)',
+            [habit_id, points_earned, notes || null]
+        );
+        await connection.end();
+        res.status(201).json({message: 'Habit completed successfully'});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({message: 'Server error - could not log completion'});
+    }
+});
