@@ -125,29 +125,21 @@ app.get('/summary', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
         
-        // Get completion history with habit names
         const [completions] = await connection.execute(`
-            SELECT 
-                h.title as habit_name,
-                h.points_per_completion,
-                c.completion_id,
-                c.habit_id,
-                c.points_earned,
-                c.completion_date,
-                c.notes
+            SELECT h.title as habit_name, h.points_per_completion, 
+                   c.completion_id, c.habit_id, c.points_earned, 
+                   c.completion_date, c.notes
             FROM habit_completions c
             JOIN Habits h ON c.habit_id = h.habit_id
-            WHERE h.is_active = 1
             ORDER BY c.completion_date DESC
         `);
         
-        // Get total points
-        const [totals] = await connection.execute('SELECT SUM(points_earned) as total_points FROM habit_completions');
+        const [totals] = await connection.execute('SELECT COALESCE(SUM(points_earned), 0) as total_points FROM habit_completions');
         
         await connection.end();
         
         res.json({
-            total_points: totals[0].total_points || 0,
+            total_points: totals[0].total_points,
             completions: completions
         });
     } catch (err) {
