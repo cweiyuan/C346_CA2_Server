@@ -39,20 +39,23 @@ app.get('/habits', async (req, res) => {
     }
 });
 
-//Example Route: Create a new game
-app.post('/addgames', async(req,res) => {
-    const {game_name, game_pic} = req.body;
-    try{
-        let connection = await mysql.createConnection(dbConfig)
-        await connection.execute('INSERT INTO games (game_name, game_pic) VALUES (?, ?)',  [game_name, game_pic]);
-        res.status(201).json({message: 'Game' + game_name +'added successfully'});
-    }
-
-    catch (err) {
+// Create new habit 
+app.post('/addhabits', async (req, res) => {
+    const {title, description, category, points_per_completion} = req.body;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        await connection.execute(
+            'INSERT INTO Habits (title, description, category, points_per_completion) VALUES (?, ?, ?, ?)',
+            [title, description || null, category || null, points_per_completion || 10]
+        );
+        await connection.end();
+        res.status(201).json({message: `Habit "${title}" added successfully`});
+    } catch (err) {
         console.error(err);
-        res.status(500).json({messgae: 'Server error - could not add game' + game_name});
+        res.status(500).json({message: 'Server error - could not add habit'});
     }
 });
+
 
 // Update Route: Update a game by ID
 app.put('/updategame/:id', async (req, res) => {
