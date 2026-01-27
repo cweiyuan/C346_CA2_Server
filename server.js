@@ -31,7 +31,7 @@ app.listen(port, () => {
 app.get('/habits', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM Habits WHERE is_active = 1');
+        const [rows] = await connection.execute('SELECT * FROM Habits');
         await connection.end();
         res.json(rows);
     } catch (err) {
