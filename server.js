@@ -27,14 +27,15 @@ app.listen(port, () => {
 });
 
 //Example Route: Get all games
-app.get('/allgames', async (req, res) => {
+app.get('/habits', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM defaultdb.games');
+        const [rows] = await connection.execute('SELECT * FROM Habits WHERE is_active = 1');
+        await connection.end();
         res.json(rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({message:'Server error for allgames'});
+        res.status(500).json({message: 'Server error for habits'});
     }
 });
 
