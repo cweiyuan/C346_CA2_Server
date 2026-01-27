@@ -59,7 +59,7 @@ app.post('/addhabits', async (req, res) => {
 
 
 // Update Route: Update a habit by ID
-app.put('/habits/:id', async (req, res) => {
+app.put('/updatehabits/:id', async (req, res) => {
     const { id } = req.params;
     const {title, description, category, points_per_completion, is_active} = req.body;
     try {
@@ -79,15 +79,15 @@ app.put('/habits/:id', async (req, res) => {
 
 
 // Delete Route: Delete a game by IDs
-app.delete('/deletegame/:id', async(req,res) => {
-    const {id} = req.params;
-    try{
-        let connection = await mysql.createConnection(dbConfig)
-        await connection.execute('DELETE FROM defaultdb.games WHERE id = ?', [id]);
-        res.json({message: 'Game deleted successfully'});
-    }
-    catch (err) {
+app.delete('/deletehabits/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        await connection.execute('UPDATE Habits SET is_active = 0 WHERE habit_id = ?', [id]);
+        await connection.end();
+        res.json({message: 'Habit deleted successfully'});
+    } catch (err) {
         console.error(err);
-        res.status(500).json({message: 'Server error - could not delete game'});
+        res.status(500).json({message: 'Server error - could not delete habit'});
     }
 });
