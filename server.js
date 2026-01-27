@@ -108,3 +108,15 @@ app.post('/completions', async (req, res) => {
         res.status(500).json({message: 'Server error - could not log completion'});
     }
 });
+
+app.get('/totalpoints', async (req, res) => {
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT SUM(points_earned) as total_points FROM habit_completions');
+        await connection.end();
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({message: 'Server error for points'});
+    }
+});
