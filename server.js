@@ -120,3 +120,38 @@ app.get('/totalpoints', async (req, res) => {
         res.status(500).json({message: 'Server error for points'});
     }
 });
+
+app.get('/summary', async (req, res) => {
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        
+        // Get completion history with habit names
+        const [completions] = await connection.execute(`
+            SELECT 
+                h.title as habit_name,
+                h.points_per_completion,
+                c.completion_id,
+                c.habit_id,
+                c.points_earned,
+                c.completion_date,
+                c.notes
+            FROM habit_completions c
+            JOIN Habits h ON c.habit_id = h.habit_id
+            WHERE h.is_active = 1
+            ORDER BY c.completion_date DESC
+        `);
+        
+        // Get total points
+        const [totals] = await connection.execute('SELECT SUM(points_earned) as total_points FROM habit_completions');
+        
+        await connection.end();
+        
+        res.json({
+            total_points: totals[0].total_points || 0,
+            completions: completions
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({message: 'Server error for summary'});
+    }
+});
