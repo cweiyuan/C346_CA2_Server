@@ -125,22 +125,21 @@ app.get('/summary', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
         
-        const [completions] = await connection.execute(`
-            SELECT h.title as habit_name, h.points_per_completion, 
-                   c.completion_id, c.habit_id, c.points_earned, 
-                   c.completion_date, c.notes
+        const [rows] = await connection.execute(`
+            SELECT h.title as habit_name, SUM(c.points_earned) as points
             FROM habit_completions c
             JOIN Habits h ON c.habit_id = h.habit_id
-            ORDER BY c.completion_date DESC
+            GROUP BY h.habit_id, h.title
+            ORDER BY points DESC
         `);
         
-        const [totals] = await connection.execute('SELECT COALESCE(SUM(points_earned), 0) as total_points FROM habit_completions');
+        const [total] = await connection.execute('SELECT COALESCE(SUM(points_earned), 0) as total_points FROM habit_completions');
         
         await connection.end();
         
         res.json({
-            total_points: totals[0].total_points,
-            completions: completions
+            total_points: total[0].total_points,
+            habits: rows  // [{habit_name: "Bag", points: 30}, ...]
         });
     } catch (err) {
         console.error(err);
