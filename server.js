@@ -58,23 +58,24 @@ app.post('/addhabits', async (req, res) => {
 });
 
 
-// Update Route: Update a game by ID
-app.put('/updategame/:id', async (req, res) => {
+// Update Route: Update a habit by ID
+app.put('/habits/:id', async (req, res) => {
     const { id } = req.params;
-    const { game_name, game_pic } = req.body;
-
+    const {title, description, category, points_per_completion, is_active} = req.body;
     try {
         let connection = await mysql.createConnection(dbConfig);
         await connection.execute(
-            'UPDATE defaultdb.games SET game_name = ?, game_pic = ? WHERE id = ?',
-            [game_name, game_pic, id]
+            'UPDATE Habits SET title = ?, description = ?, category = ?, points_per_completion = ?, is_active = ? WHERE habit_id = ?',
+            [title, description || null, category || null, points_per_completion || 10, is_active || 1, id]
         );
-        res.json({ message: 'Game updated successfully' });
+        await connection.end();
+        res.json({ message: 'Habit updated successfully' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error - could not update game' });
+        res.status(500).json({ message: 'Server error - could not update habit' });
     }
 });
+
 
 
 // Delete Route: Delete a game by IDs
