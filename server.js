@@ -1,10 +1,10 @@
-// include the required packages
+// server.js - FULL FIXED VERSION
 const express = require('express');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 const port = 3000;
 
-//database config info
+// Database config
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -17,17 +17,16 @@ const dbConfig = {
     queueLimit: 0
 };
 
-//initialize Express app
+// Initialize Express app
 const app = express();
-//helps app to read JSON data
 app.use(express.json());
 
-//start the server
+// Start server
 app.listen(port, () => {
-    console.log('Server running on port ' , port);
+    console.log('Server running on port', port);
 });
 
-//Example Route: Get all games
+// Get all habits
 app.get('/habits', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
@@ -57,8 +56,7 @@ app.post('/addhabits', async (req, res) => {
     }
 });
 
-
-// Update Route: Update a habit by ID
+// Update habit by ID
 app.put('/updatehabits/:id', async (req, res) => {
     const { id } = req.params;
     const {title, description, category, points_per_completion} = req.body;
@@ -76,9 +74,7 @@ app.put('/updatehabits/:id', async (req, res) => {
     }
 });
 
-
-// Delete Route: Delete a game by IDs
-
+// Delete habit by ID
 app.delete('/deletehabits/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -92,8 +88,7 @@ app.delete('/deletehabits/:id', async (req, res) => {
     }
 });
 
-
-//completion route
+// Log habit completion
 app.post('/completions', async (req, res) => {
     const {habit_id, points_earned, notes} = req.body;
     try {
@@ -110,7 +105,7 @@ app.post('/completions', async (req, res) => {
     }
 });
 
-// Get completion count for a habit
+// Get completion count for habit
 app.get('/habit/:id/completions', async (req, res) => {
     const { id } = req.params;
     try {
@@ -127,18 +122,21 @@ app.get('/habit/:id/completions', async (req, res) => {
     }
 });
 
-// Set completion count for a habit (edit count and adjust points)
+// FIXED: Set completion count for habit (handles add/remove)
 app.put('/habit/:id/completions', async (req, res) => {
     const { id } = req.params;
     const { new_count } = req.body;
+    
     try {
         let connection = await mysql.createConnection(dbConfig);
+        
         // Get current count
         const [currentRows] = await connection.execute(
             'SELECT COUNT(*) as completion_count FROM habit_completions WHERE habit_id = ?',
             [id]
         );
         const currentCount = currentRows[0].completion_count;
+        
         // Get points per completion
         const [habitRows] = await connection.execute(
             'SELECT points_per_completion FROM Habits WHERE habit_id = ?',
@@ -149,6 +147,7 @@ app.put('/habit/:id/completions', async (req, res) => {
             return res.status(404).json({ message: 'Habit not found' });
         }
         const pointsPer = habitRows[0].points_per_completion;
+        
         if (new_count > currentCount) {
             // Add completions
             const toAdd = new_count - currentCount;
@@ -159,13 +158,23 @@ app.put('/habit/:id/completions', async (req, res) => {
                 );
             }
         } else if (new_count < currentCount) {
-            // Remove most recent completions
+            // FIXED: Remove most recent completions
             const toRemove = currentCount - new_count;
-            await connection.execute(
-                'DELETE FROM habit_completions WHERE habit_id = ? ORDER BY completion_id DESC LIMIT ?',
+            const [idsToDelete] = await connection.execute(
+                'SELECT completion_id FROM habit_completions WHERE habit_id = ? ORDER BY completion_id DESC LIMIT ?',
                 [id, toRemove]
             );
+            const deleteIds = idsToDelete.map(row => row.completion_id);
+            
+            if (deleteIds.length > 0) {
+                const placeholders = deleteIds.map(() => '?').join(',');
+                await connection.execute(
+                    `DELETE FROM habit_completions WHERE completion_id IN (${placeholders})`,
+                    deleteIds
+                );
+            }
         }
+        
         await connection.end();
         res.json({ message: 'Completion count updated', new_count });
     } catch (err) {
@@ -174,6 +183,7 @@ app.put('/habit/:id/completions', async (req, res) => {
     }
 });
 
+// Total points
 app.get('/totalpoints', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
@@ -186,6 +196,7 @@ app.get('/totalpoints', async (req, res) => {
     }
 });
 
+// Summary
 app.get('/summary', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
@@ -204,7 +215,7 @@ app.get('/summary', async (req, res) => {
         
         res.json({
             total_points: total[0].total_points,
-            habits: rows  // [{habit_name: "Bag", points: 30}, ...]
+            habits: rows
         });
     } catch (err) {
         console.error(err);
