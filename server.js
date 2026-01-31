@@ -109,6 +109,70 @@ app.post('/completions', async (req, res) => {
     }
 });
 
+// Get completion count for a habit
+app.get('/habit/:id/completions', async (req, res) => {
+    const { id } = req.params;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute(
+            'SELECT COUNT(*) as completion_count FROM habit_completions WHERE habit_id = ?',
+            [id]
+        );
+        await connection.end();
+        res.json({ completion_count: rows[0].completion_count });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error - could not fetch completion count' });
+    }
+});
+
+// Set completion count for a habit (edit count and adjust points)
+app.put('/habit/:id/completions', async (req, res) => {
+    const { id } = req.params;
+    const { new_count } = req.body;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        // Get current count
+        const [currentRows] = await connection.execute(
+            'SELECT COUNT(*) as completion_count FROM habit_completions WHERE habit_id = ?',
+            [id]
+        );
+        const currentCount = currentRows[0].completion_count;
+        // Get points per completion
+        const [habitRows] = await connection.execute(
+            'SELECT points_per_completion FROM Habits WHERE habit_id = ?',
+            [id]
+        );
+        if (habitRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ message: 'Habit not found' });
+        }
+        const pointsPer = habitRows[0].points_per_completion;
+        if (new_count > currentCount) {
+            // Add completions
+            const toAdd = new_count - currentCount;
+            for (let i = 0; i < toAdd; i++) {
+                await connection.execute(
+                    'INSERT INTO habit_completions (habit_id, points_earned) VALUES (?, ?)',
+                    [id, pointsPer]
+                );
+            }
+        } else if (new_count < currentCount) {
+            // Remove most recent completions
+            const toRemove = currentCount - new_count;
+            await connection.execute(
+                'DELETE FROM habit_completions WHERE habit_id = ? ORDER BY completion_id DESC LIMIT ?',
+                [id, toRemove]
+            );
+        }
+        await connection.end();
+        res.json({ message: 'Completion count updated', new_count });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error - could not update completion count' });
+    }
+});
+
 app.get('/totalpoints', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
