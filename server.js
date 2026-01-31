@@ -90,12 +90,12 @@ app.delete('/deletehabits/:id', async (req, res) => {
 
 // Log habit completion
 app.post('/completions', async (req, res) => {
-    const {habit_id, points_earned, notes} = req.body;
+    const {habit_id, points_earned} = req.body;
     try {
         let connection = await mysql.createConnection(dbConfig);
         await connection.execute(
-            'INSERT INTO habit_completions (habit_id, points_earned, notes) VALUES (?, ?, ?)',
-            [habit_id, points_earned, notes || null]
+            'INSERT INTO habit_completions (habit_id, points_earned) VALUES (?, ?)',
+            [habit_id, points_earned]
         );
         await connection.end();
         res.status(201).json({message: 'Habit completed successfully'});
@@ -161,8 +161,8 @@ app.put('/habit/:id/completions', async (req, res) => {
             // FIXED: Remove most recent completions
             const toRemove = currentCount - new_count;
             const [idsToDelete] = await connection.execute(
-                'SELECT completion_id FROM habit_completions WHERE habit_id = ? ORDER BY completion_id DESC LIMIT ?',
-                [id, toRemove]
+                `SELECT completion_id FROM habit_completions WHERE habit_id = ? ORDER BY completion_id DESC LIMIT ${toRemove}`,
+                [id]
             );
             const deleteIds = idsToDelete.map(row => row.completion_id);
             
